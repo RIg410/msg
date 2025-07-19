@@ -256,7 +256,8 @@ mod generator_tests {
     fn test_generate_text_markdown() {
         let generator = Generator::new(ParseMode::MarkdownV2);
         let element = Element::Text("Hello, world!".to_string());
-        let result = generator.generate(&element).unwrap();
+        let mut result = String::new();
+        generator.generate(&mut result, &element).unwrap();
         assert_eq!(result, "Hello, world\\!");
     }
 
@@ -264,7 +265,8 @@ mod generator_tests {
     fn test_generate_text_html() {
         let generator = Generator::new(ParseMode::Html);
         let element = Element::Text("Hello <world>".to_string());
-        let result = generator.generate(&element).unwrap();
+        let mut result = String::new();
+        generator.generate(&mut result, &element).unwrap();
         assert_eq!(result, "Hello &lt;world&gt;");
     }
 
@@ -272,7 +274,8 @@ mod generator_tests {
     fn test_generate_bold_markdown() {
         let generator = Generator::new(ParseMode::MarkdownV2);
         let element = Element::Bold(vec![Element::Text("bold text".to_string())]);
-        let result = generator.generate(&element).unwrap();
+        let mut result = String::new();
+        generator.generate(&mut result, &element).unwrap();
         assert_eq!(result, "*bold text*");
     }
 
@@ -280,7 +283,8 @@ mod generator_tests {
     fn test_generate_bold_html() {
         let generator = Generator::new(ParseMode::Html);
         let element = Element::Bold(vec![Element::Text("bold text".to_string())]);
-        let result = generator.generate(&element).unwrap();
+        let mut result = String::new();
+        generator.generate(&mut result, &element).unwrap();
         assert_eq!(result, "<b>bold text</b>");
     }
 
@@ -291,7 +295,8 @@ mod generator_tests {
             text: vec![Element::Text("Google".to_string())],
             url: "https://google.com".to_string(),
         };
-        let result = generator.generate(&element).unwrap();
+        let mut result = String::new();
+        generator.generate(&mut result, &element).unwrap();
         assert_eq!(result, "[Google](https://google.com)");
     }
 
@@ -302,7 +307,8 @@ mod generator_tests {
             text: vec![Element::Text("Google".to_string())],
             url: "https://google.com".to_string(),
         };
-        let result = generator.generate(&element).unwrap();
+        let mut result = String::new();
+        generator.generate(&mut result, &element).unwrap();
         assert_eq!(result, "<a href=\"https://google.com\">Google</a>");
     }
 
@@ -313,7 +319,8 @@ mod generator_tests {
             code: "fn main() {\n    println!(\"Hello\");\n}".to_string(),
             language: Some("rust".to_string()),
         });
-        let result = generator.generate(&element).unwrap();
+        let mut result = String::new();
+        generator.generate(&mut result, &element).unwrap();
         assert_eq!(
             result,
             "```rust\nfn main() {\n    println!(\"Hello\");\n}\n```"
@@ -336,7 +343,8 @@ mod generator_tests {
                 },
             ],
         });
-        let result = generator.generate(&element).unwrap();
+        let mut result = String::new();
+        generator.generate(&mut result, &element).unwrap();
         assert_eq!(result, "• Item 1\n• Item 2");
     }
 
@@ -347,12 +355,11 @@ mod generator_tests {
         let original = "**bold** *italic* `code`";
         let parsed = parse(original).unwrap();
         let generator = Generator::new(ParseMode::MarkdownV2);
-        let generated = parsed
-            .iter()
-            .map(|e| generator.generate(e))
-            .collect::<Result<Vec<_>, _>>()
-            .unwrap()
-            .join("");
+
+        let mut generated = String::new();
+        for element in &parsed {
+            generator.generate(&mut generated, element).unwrap();
+        }
 
         assert!(generated.contains("*bold*"));
         assert!(generated.contains("_italic_"));

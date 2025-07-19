@@ -59,22 +59,30 @@ fn main() {
     let generator = Generator::new(ParseMode::MarkdownV2);
 
     println!("=== Пример 1 ===");
+    let mut output = String::new();
     for element in &msg1 {
-        print!("{}", generator.generate(element).unwrap());
+        generator.generate(&mut output, element).unwrap();
     }
+    print!("{}", output);
 
     println!("\n=== Пример 2 ===");
+    let mut output = String::new();
     for element in &msg2 {
-        print!("{}", generator.generate(element).unwrap());
+        generator.generate(&mut output, element).unwrap();
     }
+    print!("{}", output);
 
     println!("\n=== Список ===");
-    println!("{}", generator.generate(&list).unwrap());
+    let mut output = String::new();
+    generator.generate(&mut output, &list).unwrap();
+    println!("{}", output);
 
     let html_generator = Generator::new(ParseMode::Html);
 
     println!("\n=== HTML версия примера 1 ===");
+    let mut output = String::new();
     for element in &msg1 {
-        print!("{}", html_generator.generate(element).unwrap());
+        html_generator.generate(&mut output, element).unwrap();
     }
+    print!("{}", output);
 }

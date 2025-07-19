@@ -20,21 +20,23 @@ fn main() {
     };
 
     let generator = Generator::new(ParseMode::MarkdownV2);
+    let mut output = String::new();
     for element in &message {
-        match generator.generate(element) {
-            Ok(text) => print!("{}", text),
+        match generator.generate(&mut output, element) {
+            Ok(_) => {},
             Err(e) => eprintln!("Error: {}", e),
         }
     }
-    println!();
+    println!("{}", output);
 
     let html_generator = Generator::new(ParseMode::Html);
+    let mut html_output = String::new();
     println!("\nHTML version:");
     for element in &message {
-        match html_generator.generate(element) {
-            Ok(text) => print!("{}", text),
+        match html_generator.generate(&mut html_output, element) {
+            Ok(_) => {},
             Err(e) => eprintln!("Error: {}", e),
         }
     }
-    println!();
+    println!("{}", html_output);
 }

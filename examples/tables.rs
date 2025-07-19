@@ -97,7 +97,9 @@ fn main() {
     let generator = Generator::new(ParseMode::MarkdownV2);
 
     println!("=== Таблица Unicode ===");
-    println!("{}", generator.generate(&table1).unwrap());
+    let mut output = String::new();
+    generator.generate(&mut output, &table1).unwrap();
+    println!("{}", output);
 
     let table2 = match table1.clone() {
         Element::Table(mut t) => {
@@ -108,7 +110,9 @@ fn main() {
     };
 
     println!("\n=== Таблица ASCII ===");
-    println!("{}", generator.generate(&table2).unwrap());
+    let mut output = String::new();
+    generator.generate(&mut output, &table2).unwrap();
+    println!("{}", output);
 
     let table3 = match table1.clone() {
         Element::Table(mut t) => {
@@ -119,7 +123,9 @@ fn main() {
     };
 
     println!("\n=== Таблица Minimal ===");
-    println!("{}", generator.generate(&table3).unwrap());
+    let mut output = String::new();
+    generator.generate(&mut output, &table3).unwrap();
+    println!("{}", output);
 
     let table4 = match table1 {
         Element::Table(mut t) => {
@@ -130,5 +136,7 @@ fn main() {
     };
 
     println!("\n=== Таблица Compact ===");
-    println!("{}", generator.generate(&table4).unwrap());
+    let mut output = String::new();
+    generator.generate(&mut output, &table4).unwrap();
+    println!("{}", output);
 }

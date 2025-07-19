@@ -73,12 +73,14 @@ fn main() {
     println!("Contact info: {:?}", msg8);
 
     let generator = Generator::new(ParseMode::MarkdownV2);
+    let mut output = String::new();
     for element in &msg2 {
-        match generator.generate(element) {
-            Ok(text) => println!("Generated: {}", text),
+        match generator.generate(&mut output, element) {
+            Ok(()) => {},
             Err(e) => println!("Error: {}", e),
         }
     }
+    println!("Generated: {}", output);
 
     let element = msg!(bold { "Single bold element" });
     println!("Single element: {:?}", element);

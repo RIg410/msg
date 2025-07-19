@@ -64,23 +64,21 @@ fn main() {
     ];
 
     println!("=== MarkdownV2 ===");
+    let mut output = String::new();
     for element in &message {
-        print!(
-            "{}",
-            generator
-                .generate(element)
-                .unwrap_or_else(|e| format!("[ERROR: {}]", e))
-        );
+        if let Err(e) = generator.generate(&mut output, element) {
+            output.push_str(&format!("[ERROR: {}]", e));
+        }
     }
+    print!("{}", output);
 
     println!("\n\n=== HTML ===");
     let html_generator = Generator::new(ParseMode::Html);
+    let mut output = String::new();
     for element in &message {
-        print!(
-            "{}",
-            html_generator
-                .generate(element)
-                .unwrap_or_else(|e| format!("[ERROR: {}]", e))
-        );
+        if let Err(e) = html_generator.generate(&mut output, element) {
+            output.push_str(&format!("[ERROR: {}]", e));
+        }
     }
+    print!("{}", output);
 }

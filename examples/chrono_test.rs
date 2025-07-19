@@ -41,11 +41,12 @@ fn main() {
 
     let generator = Generator::new(ParseMode::MarkdownV2);
     println!("\nGenerated MarkdownV2:");
+    let mut output = String::new();
     for element in &msg3 {
-        match generator.generate(element) {
-            Ok(text) => print!("{}", text),
+        match generator.generate(&mut output, element) {
+            Ok(()) => {},
             Err(e) => println!("Error: {}", e),
         }
     }
-    println!();
+    println!("{}", output);
 }

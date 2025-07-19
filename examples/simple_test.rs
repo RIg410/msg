@@ -14,11 +14,12 @@ fn main() {
     ];
 
     let generator = Generator::new(ParseMode::MarkdownV2);
+    let mut output = String::new();
     for element in &msg2 {
-        match generator.generate(element) {
-            Ok(text) => print!("{}", text),
+        match generator.generate(&mut output, element) {
+            Ok(()) => {},
             Err(e) => eprintln!("Error: {}", e),
         }
     }
-    println!();
+    println!("{}", output);
 }

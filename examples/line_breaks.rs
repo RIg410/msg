@@ -22,11 +22,12 @@ fn main() {
     }
 
     println!("\nGenerated message:");
+    let mut output = String::new();
     for element in &message {
-        match generator.generate(element) {
-            Ok(text) => print!("{}", text),
+        match generator.generate(&mut output, element) {
+            Ok(()) => {},
             Err(e) => eprintln!("Error: {}", e),
         }
     }
-    println!();
+    println!("{}", output);
 }

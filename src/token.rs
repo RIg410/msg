@@ -9,26 +9,26 @@ pub enum Token {
     Underline,
     Strikethrough,
     Spoiler,
-    
+
     Link(String),
     Mention(String),
     MentionId(u64),
     Hashtag(String),
     Command(String),
-    
+
     Emoji(String),
     CustomEmoji(String, u64),
-    
+
     LineBreak,
     Escape(char),
-    
+
     LeftParen,
     RightParen,
     LeftBracket,
     RightBracket,
     LeftBrace,
     RightBrace,
-    
+
     Star,
     Underscore,
     Backtick,
@@ -37,7 +37,7 @@ pub enum Token {
     At,
     Hash,
     Slash,
-    
+
     Eof,
 }
 
@@ -45,14 +45,10 @@ impl Token {
     pub fn is_delimiter(&self) -> bool {
         matches!(
             self,
-            Token::Star
-                | Token::Underscore
-                | Token::Backtick
-                | Token::Tilde
-                | Token::Pipe
+            Token::Star | Token::Underscore | Token::Backtick | Token::Tilde | Token::Pipe
         )
     }
-    
+
     pub fn is_structural(&self) -> bool {
         matches!(
             self,
@@ -78,23 +74,23 @@ impl Lexer {
             position: 0,
         }
     }
-    
+
     pub fn tokenize(&mut self) -> Vec<Token> {
         let mut tokens = Vec::new();
-        
+
         while !self.is_at_end() {
             if let Some(token) = self.next_token() {
                 tokens.push(token);
             }
         }
-        
+
         tokens.push(Token::Eof);
         tokens
     }
-    
+
     fn next_token(&mut self) -> Option<Token> {
         let ch = self.current_char()?;
-        
+
         match ch {
             '*' => {
                 self.advance();
@@ -180,28 +176,42 @@ impl Lexer {
             _ => Some(self.read_text()),
         }
     }
-    
+
     fn read_text(&mut self) -> Token {
         let mut text = String::new();
-        
+
         while let Some(ch) = self.current_char() {
             if matches!(
                 ch,
-                '*' | '_' | '`' | '~' | '|' | '@' | '#' | '/' | '(' | ')' | '[' | ']' | '{' | '}' | '\\' | '\n'
+                '*' | '_'
+                    | '`'
+                    | '~'
+                    | '|'
+                    | '@'
+                    | '#'
+                    | '/'
+                    | '('
+                    | ')'
+                    | '['
+                    | ']'
+                    | '{'
+                    | '}'
+                    | '\\'
+                    | '\n'
             ) {
                 break;
             }
             text.push(ch);
             self.advance();
         }
-        
+
         Token::Text(text)
     }
-    
+
     fn read_mention(&mut self) -> Option<Token> {
         let start = self.position;
         let mut username = String::new();
-        
+
         while let Some(ch) = self.current_char() {
             if ch.is_alphanumeric() || ch == '_' {
                 username.push(ch);
@@ -210,7 +220,7 @@ impl Lexer {
                 break;
             }
         }
-        
+
         if username.is_empty() {
             self.position = start;
             None
@@ -218,11 +228,11 @@ impl Lexer {
             Some(Token::Mention(username))
         }
     }
-    
+
     fn read_hashtag(&mut self) -> Option<Token> {
         let start = self.position;
         let mut tag = String::new();
-        
+
         while let Some(ch) = self.current_char() {
             if ch.is_alphanumeric() || ch == '_' {
                 tag.push(ch);
@@ -231,7 +241,7 @@ impl Lexer {
                 break;
             }
         }
-        
+
         if tag.is_empty() {
             self.position = start;
             None
@@ -239,11 +249,11 @@ impl Lexer {
             Some(Token::Hashtag(tag))
         }
     }
-    
+
     fn read_command(&mut self) -> Option<Token> {
         let start = self.position;
         let mut command = String::new();
-        
+
         while let Some(ch) = self.current_char() {
             if ch.is_alphanumeric() || ch == '_' {
                 command.push(ch);
@@ -252,7 +262,7 @@ impl Lexer {
                 break;
             }
         }
-        
+
         if command.is_empty() {
             self.position = start;
             None
@@ -260,15 +270,15 @@ impl Lexer {
             Some(Token::Command(command))
         }
     }
-    
+
     fn current_char(&self) -> Option<char> {
         self.input.get(self.position).copied()
     }
-    
+
     fn advance(&mut self) {
         self.position += 1;
     }
-    
+
     fn is_at_end(&self) -> bool {
         self.position >= self.input.len()
     }

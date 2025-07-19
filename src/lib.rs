@@ -13,5 +13,7 @@ pub use generator::{Generate, Generator, ParseMode};
 pub use parser::{parse, Parse, ParseStream};
 pub use token::Token;
 
+pub use tg_message_macro::{el, msg};
+
 #[cfg(test)]
 mod tests;

@@ -15,15 +15,15 @@ impl<'a> ParseStream<'a> {
     pub fn new(tokens: &'a [Token]) -> Self {
         Self { tokens, cursor: 0 }
     }
-    
+
     pub fn peek(&self) -> Option<&Token> {
         self.tokens.get(self.cursor)
     }
-    
+
     pub fn peek_ahead(&self, n: usize) -> Option<&Token> {
         self.tokens.get(self.cursor + n)
     }
-    
+
     pub fn advance(&mut self) -> Option<Token> {
         let token = self.tokens.get(self.cursor).cloned();
         if token.is_some() {
@@ -31,7 +31,7 @@ impl<'a> ParseStream<'a> {
         }
         token
     }
-    
+
     pub fn consume(&mut self, expected: &Token) -> Result<()> {
         match self.advance() {
             Some(token) if &token == expected => Ok(()),
@@ -42,11 +42,11 @@ impl<'a> ParseStream<'a> {
             None => Err(Error::UnexpectedEof),
         }
     }
-    
+
     pub fn is_at_end(&self) -> bool {
         matches!(self.peek(), None | Some(Token::Eof))
     }
-    
+
     pub fn parse<T: Parse>(&mut self) -> Result<T> {
         T::parse(ParseStream {
             tokens: self.tokens,
@@ -55,21 +55,21 @@ impl<'a> ParseStream<'a> {
     }
 }
 
-pub fn parse(input: &str) -> Result<Vec<TgElement>> {
+pub fn parse(input: &str) -> Result<Vec<Element>> {
     let mut lexer = Lexer::new(input);
     let tokens = lexer.tokenize();
     let mut stream = ParseStream::new(&tokens);
-    
+
     let mut elements = Vec::new();
-    
+
     while !stream.is_at_end() {
         elements.push(parse_element(&mut stream)?);
     }
-    
+
     Ok(elements)
 }
 
-fn parse_element(stream: &mut ParseStream) -> Result<TgElement> {
+fn parse_element(stream: &mut ParseStream) -> Result<Element> {
     let token = stream.peek().cloned();
     match token {
         Some(Token::Star) => parse_bold_or_italic(stream),
@@ -79,74 +79,74 @@ fn parse_element(stream: &mut ParseStream) -> Result<TgElement> {
         Some(Token::LeftBracket) => parse_link(stream),
         Some(Token::Mention(username)) => {
             stream.advance();
-            Ok(TgElement::Mention { username })
+            Ok(Element::Mention { username })
         }
         Some(Token::Hashtag(tag)) => {
             stream.advance();
-            Ok(TgElement::Hashtag(tag))
+            Ok(Element::Hashtag(tag))
         }
         Some(Token::Command(cmd)) => {
             stream.advance();
-            Ok(TgElement::Command {
+            Ok(Element::Command {
                 name: cmd,
                 args: Vec::new(),
             })
         }
         Some(Token::Text(text)) => {
             stream.advance();
-            Ok(TgElement::Text(text))
+            Ok(Element::Text(text))
         }
         Some(Token::Escape(ch)) => {
             stream.advance();
-            Ok(TgElement::Text(ch.to_string()))
+            Ok(Element::Text(ch.to_string()))
         }
         Some(Token::LineBreak) => {
             stream.advance();
-            Ok(TgElement::Text("\n".to_string()))
+            Ok(Element::Text("\n".to_string()))
         }
         _ => {
             stream.advance();
-            Ok(TgElement::Text("".to_string()))
+            Ok(Element::Text("".to_string()))
         }
     }
 }
 
-fn parse_bold_or_italic(stream: &mut ParseStream) -> Result<TgElement> {
+fn parse_bold_or_italic(stream: &mut ParseStream) -> Result<Element> {
     stream.consume(&Token::Star)?;
-    
+
     if matches!(stream.peek(), Some(Token::Star)) {
         stream.advance();
         let content = parse_until_double_star(stream)?;
-        Ok(TgElement::Bold(content))
+        Ok(Element::Bold(content))
     } else {
         let content = parse_until_single_star(stream)?;
-        Ok(TgElement::Italic(content))
+        Ok(Element::Italic(content))
     }
 }
 
-fn parse_italic_or_underline(stream: &mut ParseStream) -> Result<TgElement> {
+fn parse_italic_or_underline(stream: &mut ParseStream) -> Result<Element> {
     stream.consume(&Token::Underscore)?;
-    
+
     if matches!(stream.peek(), Some(Token::Underscore)) {
         stream.advance();
         let content = parse_until_double_underscore(stream)?;
-        Ok(TgElement::Underline(content))
+        Ok(Element::Underline(content))
     } else {
         let content = parse_until_single_underscore(stream)?;
-        Ok(TgElement::Italic(content))
+        Ok(Element::Italic(content))
     }
 }
 
-fn parse_code_or_pre(stream: &mut ParseStream) -> Result<TgElement> {
+fn parse_code_or_pre(stream: &mut ParseStream) -> Result<Element> {
     stream.consume(&Token::Backtick)?;
-    
+
     if matches!(stream.peek(), Some(Token::Backtick)) {
         stream.advance();
         if matches!(stream.peek(), Some(Token::Backtick)) {
             stream.advance();
             parse_pre_block(stream)
         } else {
-            Ok(TgElement::Code("".to_string()))
+            Ok(Element::Code("".to_string()))
         }
     } else {
         let mut code = String::new();
@@ -154,7 +154,7 @@ fn parse_code_or_pre(stream: &mut ParseStream) -> Result<TgElement> {
             match token {
                 Token::Backtick => {
                     stream.advance();
-                    return Ok(TgElement::Code(code));
+                    return Ok(Element::Code(code));
                 }
                 Token::Text(text) => {
                     code.push_str(text);
@@ -167,7 +167,7 @@ fn parse_code_or_pre(stream: &mut ParseStream) -> Result<TgElement> {
     }
 }
 
-fn parse_pre_block(stream: &mut ParseStream) -> Result<TgElement> {
+fn parse_pre_block(stream: &mut ParseStream) -> Result<Element> {
     let language = match stream.peek() {
         Some(Token::Text(lang)) => {
             let language = Some(lang.clone());
@@ -176,23 +176,23 @@ fn parse_pre_block(stream: &mut ParseStream) -> Result<TgElement> {
         }
         _ => None,
     };
-    
+
     if language.is_some() {
         if let Some(Token::LineBreak) = stream.peek() {
             stream.advance();
         }
     }
-    
+
     let mut code = String::new();
     let mut backtick_count = 0;
-    
+
     while let Some(token) = stream.peek() {
         match token {
             Token::Backtick => {
                 backtick_count += 1;
                 stream.advance();
                 if backtick_count == 3 {
-                    return Ok(TgElement::Pre(PreBlock { code, language }));
+                    return Ok(Element::Pre(PreBlock { code, language }));
                 } else {
                     code.push('`');
                 }
@@ -213,36 +213,36 @@ fn parse_pre_block(stream: &mut ParseStream) -> Result<TgElement> {
             }
         }
     }
-    
+
     Err(Error::Parse("Unclosed pre block".to_string()))
 }
 
-fn parse_strikethrough_or_spoiler(stream: &mut ParseStream) -> Result<TgElement> {
+fn parse_strikethrough_or_spoiler(stream: &mut ParseStream) -> Result<Element> {
     stream.consume(&Token::Tilde)?;
-    
+
     if matches!(stream.peek(), Some(Token::Tilde)) {
         stream.advance();
         let content = parse_until_double_tilde(stream)?;
-        Ok(TgElement::Strikethrough(content))
+        Ok(Element::Strikethrough(content))
     } else {
         let content = parse_until_single_tilde(stream)?;
-        Ok(TgElement::Spoiler(content))
+        Ok(Element::Spoiler(content))
     }
 }
 
-fn parse_link(stream: &mut ParseStream) -> Result<TgElement> {
+fn parse_link(stream: &mut ParseStream) -> Result<Element> {
     stream.consume(&Token::LeftBracket)?;
-    
+
     let text = parse_until_right_bracket(stream)?;
     stream.consume(&Token::RightBracket)?;
     stream.consume(&Token::LeftParen)?;
-    
+
     let mut url = String::new();
     while let Some(token) = stream.peek() {
         match token {
             Token::RightParen => {
                 stream.advance();
-                return Ok(TgElement::Link { text, url });
+                return Ok(Element::Link { text, url });
             }
             Token::Text(text) => {
                 url.push_str(text);
@@ -310,13 +310,13 @@ fn parse_link(stream: &mut ParseStream) -> Result<TgElement> {
             _ => break,
         }
     }
-    
+
     Err(Error::Parse("Unclosed link".to_string()))
 }
 
-fn parse_until_double_star(stream: &mut ParseStream) -> Result<Vec<TgElement>> {
+fn parse_until_double_star(stream: &mut ParseStream) -> Result<Vec<Element>> {
     let mut elements = Vec::new();
-    
+
     while let Some(token) = stream.peek() {
         if matches!(token, Token::Star) {
             if matches!(stream.peek_ahead(1), Some(Token::Star)) {
@@ -327,13 +327,13 @@ fn parse_until_double_star(stream: &mut ParseStream) -> Result<Vec<TgElement>> {
         }
         elements.push(parse_element(stream)?);
     }
-    
+
     Err(Error::Parse("Unclosed bold".to_string()))
 }
 
-fn parse_until_single_star(stream: &mut ParseStream) -> Result<Vec<TgElement>> {
+fn parse_until_single_star(stream: &mut ParseStream) -> Result<Vec<Element>> {
     let mut elements = Vec::new();
-    
+
     while let Some(token) = stream.peek() {
         if matches!(token, Token::Star) {
             stream.advance();
@@ -341,13 +341,13 @@ fn parse_until_single_star(stream: &mut ParseStream) -> Result<Vec<TgElement>> {
         }
         elements.push(parse_element(stream)?);
     }
-    
+
     Err(Error::Parse("Unclosed italic".to_string()))
 }
 
-fn parse_until_double_underscore(stream: &mut ParseStream) -> Result<Vec<TgElement>> {
+fn parse_until_double_underscore(stream: &mut ParseStream) -> Result<Vec<Element>> {
     let mut elements = Vec::new();
-    
+
     while let Some(token) = stream.peek() {
         if matches!(token, Token::Underscore) {
             if matches!(stream.peek_ahead(1), Some(Token::Underscore)) {
@@ -358,13 +358,13 @@ fn parse_until_double_underscore(stream: &mut ParseStream) -> Result<Vec<TgEleme
         }
         elements.push(parse_element(stream)?);
     }
-    
+
     Err(Error::Parse("Unclosed underline".to_string()))
 }
 
-fn parse_until_single_underscore(stream: &mut ParseStream) -> Result<Vec<TgElement>> {
+fn parse_until_single_underscore(stream: &mut ParseStream) -> Result<Vec<Element>> {
     let mut elements = Vec::new();
-    
+
     while let Some(token) = stream.peek() {
         if matches!(token, Token::Underscore) {
             stream.advance();
@@ -372,13 +372,13 @@ fn parse_until_single_underscore(stream: &mut ParseStream) -> Result<Vec<TgEleme
         }
         elements.push(parse_element(stream)?);
     }
-    
+
     Err(Error::Parse("Unclosed italic".to_string()))
 }
 
-fn parse_until_double_tilde(stream: &mut ParseStream) -> Result<Vec<TgElement>> {
+fn parse_until_double_tilde(stream: &mut ParseStream) -> Result<Vec<Element>> {
     let mut elements = Vec::new();
-    
+
     while let Some(token) = stream.peek() {
         if matches!(token, Token::Tilde) {
             if matches!(stream.peek_ahead(1), Some(Token::Tilde)) {
@@ -389,13 +389,13 @@ fn parse_until_double_tilde(stream: &mut ParseStream) -> Result<Vec<TgElement>> 
         }
         elements.push(parse_element(stream)?);
     }
-    
+
     Err(Error::Parse("Unclosed strikethrough".to_string()))
 }
 
-fn parse_until_single_tilde(stream: &mut ParseStream) -> Result<Vec<TgElement>> {
+fn parse_until_single_tilde(stream: &mut ParseStream) -> Result<Vec<Element>> {
     let mut elements = Vec::new();
-    
+
     while let Some(token) = stream.peek() {
         if matches!(token, Token::Tilde) {
             stream.advance();
@@ -403,19 +403,19 @@ fn parse_until_single_tilde(stream: &mut ParseStream) -> Result<Vec<TgElement>> 
         }
         elements.push(parse_element(stream)?);
     }
-    
+
     Err(Error::Parse("Unclosed spoiler".to_string()))
 }
 
-fn parse_until_right_bracket(stream: &mut ParseStream) -> Result<Vec<TgElement>> {
+fn parse_until_right_bracket(stream: &mut ParseStream) -> Result<Vec<Element>> {
     let mut elements = Vec::new();
-    
+
     while let Some(token) = stream.peek() {
         if matches!(token, Token::RightBracket) {
             return Ok(elements);
         }
         elements.push(parse_element(stream)?);
     }
-    
+
     Err(Error::Parse("Unclosed bracket".to_string()))
 }

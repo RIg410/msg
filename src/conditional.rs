@@ -1,4 +1,4 @@
-use crate::ast::{Condition, ConditionalFormat, TgElement};
+use crate::ast::{Condition, ConditionalFormat, Element};
 use regex::Regex;
 
 impl Condition {
@@ -12,22 +12,20 @@ impl Condition {
             }
             Condition::Equals(expected) => value == expected,
             Condition::Contains(substring) => value.contains(substring),
-            Condition::Regex(pattern) => {
-                Regex::new(pattern).map_or(false, |re| re.is_match(value))
-            }
+            Condition::Regex(pattern) => Regex::new(pattern).map_or(false, |re| re.is_match(value)),
             Condition::Custom(_) => false,
         }
     }
 }
 
-pub fn apply_conditional_format(
-    element: TgElement,
-    rules: &[ConditionalFormat],
-) -> TgElement {
-    if let TgElement::Text(ref text) = element {
+pub fn apply_conditional_format(element: Element, rules: &[ConditionalFormat]) -> Element {
+    if let Element::Text(ref text) = element {
         for rule in rules {
             if rule.condition.evaluate(text) {
-                return (rule.format)(vec![element.clone()]).into_iter().next().unwrap_or(element);
+                return (rule.format)(vec![element.clone()])
+                    .into_iter()
+                    .next()
+                    .unwrap_or(element);
             }
         }
     }

@@ -707,7 +707,17 @@ dependencies = [
  "proptest",
  "regex",
  "serde",
+ "tg-message-macro",
  "thiserror",
+]
+
+[[package]]
+name = "tg-message-macro"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

@@ -1,29 +1,27 @@
 [workspace]
-members = [".", "tg-message-macro"]
+members = [".", "msg-macro"]
 
 [package]
-name = "tg-message-builder"
-version = "0.1.0"
-edition = "2021"
-authors = ["Your Name <your.email@example.com>"]
-description = "A Rust library for building and parsing Telegram messages with MarkdownV2 and HTML support"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/yourusername/tg-message-builder"
-keywords = ["telegram", "markdown", "parser", "generator", "bot"]
 categories = ["parser-implementations", "text-processing"]
+description = "A Rust library for building and parsing Telegram messages with MarkdownV2 and HTML support"
+edition = "2021"
+keywords = ["telegram", "markdown", "parser", "generator", "bot"]
+license = "MIT OR Apache-2.0"
+name = "msg"
+version = "0.1.0"
 
 [dependencies]
-thiserror = "1.0"
-regex = "1.10"
-lazy_static = "1.4"
 chrono = "0.4"
-serde = { version = "1.0", features = ["derive"] }
-tg-message-macro = { path = "./tg-message-macro" }
+lazy_static = "1.4"
+regex = "1.10"
+serde = {version = "1.0", features = ["derive"]}
+msg-macro = {path = "./msg-macro"}
+thiserror = "1.0"
 
 [dev-dependencies]
-proptest = "1.4"
 criterion = "0.5"
 pretty_assertions = "1.4"
+proptest = "1.4"
 
 [features]
 default = []

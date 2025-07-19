@@ -1,5 +1,5 @@
 use chrono::{Local, NaiveDate, NaiveTime};
-use tg_message_builder::{msg, Generator, ParseMode};
+use msg::{msg, Generator, ParseMode};
 
 fn main() {
     let phone_number = "9991234567";

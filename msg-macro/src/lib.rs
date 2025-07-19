@@ -279,13 +279,13 @@ impl ToTokens for TgMessageItem {
                                         if mat.start() > last_end {
                                             let before = &text[last_end..mat.start()];
                                             if !before.is_empty() {
-                                                elements.push(::tg_message_builder::Element::text(before));
+                                                elements.push(::msg::Element::text(before));
                                             }
                                         }
 
                                         // Add URL as link
                                         let url = mat.as_str();
-                                        elements.push(::tg_message_builder::Element::TextLink {
+                                        elements.push(::msg::Element::TextLink {
                                             text: url.to_string(),
                                             url: url.to_string(),
                                         });
@@ -297,98 +297,98 @@ impl ToTokens for TgMessageItem {
                                     if last_end < text.len() {
                                         let after = &text[last_end..];
                                         if !after.is_empty() {
-                                            elements.push(::tg_message_builder::Element::text(after));
+                                            elements.push(::msg::Element::text(after));
                                         }
                                     }
 
                                     if elements.len() == 1 {
                                         elements.into_iter().next().unwrap()
                                     } else {
-                                        ::tg_message_builder::Element::Group(elements)
+                                        ::msg::Element::Group(elements)
                                     }
                                 } else if text.contains('\n') {
                                     let parts: Vec<&str> = text.split('\n').collect();
                                     let mut elements = Vec::new();
                                     for (i, part) in parts.iter().enumerate() {
                                         if !part.is_empty() {
-                                            elements.push(::tg_message_builder::Element::text(*part));
+                                            elements.push(::msg::Element::text(*part));
                                         }
                                         if i < parts.len() - 1 {
-                                            elements.push(::tg_message_builder::Element::text("\n"));
+                                            elements.push(::msg::Element::text("\n"));
                                         }
                                     }
-                                    ::tg_message_builder::Element::Group(elements)
+                                    ::msg::Element::Group(elements)
                                 } else {
-                                    ::tg_message_builder::Element::text(text)
+                                    ::msg::Element::text(text)
                                 }
                             }
                         }
                     }
-                    _ => quote! { ::tg_message_builder::Element::text(#lit.to_string()) },
+                    _ => quote! { ::msg::Element::text(#lit.to_string()) },
                 };
                 text
             }
             TgMessageItem::Bold(items) => {
                 let elements = generate_elements(items);
-                quote! { ::tg_message_builder::Element::bold(vec![#(#elements),*]) }
+                quote! { ::msg::Element::bold(vec![#(#elements),*]) }
             }
             TgMessageItem::Italic(items) => {
                 let elements = generate_elements(items);
-                quote! { ::tg_message_builder::Element::italic(vec![#(#elements),*]) }
+                quote! { ::msg::Element::italic(vec![#(#elements),*]) }
             }
             TgMessageItem::Underline(items) => {
                 let elements = generate_elements(items);
-                quote! { ::tg_message_builder::Element::underline(vec![#(#elements),*]) }
+                quote! { ::msg::Element::underline(vec![#(#elements),*]) }
             }
             TgMessageItem::Strikethrough(items) => {
                 let elements = generate_elements(items);
-                quote! { ::tg_message_builder::Element::strikethrough(vec![#(#elements),*]) }
+                quote! { ::msg_macro::Element::strikethrough(vec![#(#elements),*]) }
             }
             TgMessageItem::Spoiler(items) => {
                 let elements = generate_elements(items);
-                quote! { ::tg_message_builder::Element::spoiler(vec![#(#elements),*]) }
+                quote! { ::msg::Element::spoiler(vec![#(#elements),*]) }
             }
             TgMessageItem::Code(lit) => {
-                quote! { ::tg_message_builder::Element::code(#lit) }
+                quote! { ::msg::Element::code(#lit) }
             }
             TgMessageItem::Pre { code, lang } => {
                 if let Some(lang) = lang {
-                    quote! { ::tg_message_builder::Element::pre(#code, Some(#lang.to_string())) }
+                    quote! { ::msg::Element::pre(#code, Some(#lang.to_string())) }
                 } else {
-                    quote! { ::tg_message_builder::Element::pre(#code, None) }
+                    quote! { ::msg::Element::pre(#code, None) }
                 }
             }
             TgMessageItem::Link { text, url } => {
                 let elements = generate_elements(text);
-                quote! { ::tg_message_builder::Element::link(vec![#(#elements),*], #url) }
+                quote! { ::msg::Element::link(vec![#(#elements),*], #url) }
             }
             TgMessageItem::Mention(username) => {
-                quote! { ::tg_message_builder::Element::mention(#username) }
+                quote! { ::msg::Element::mention(#username) }
             }
             TgMessageItem::MentionAt(username) => {
                 let username_str = username.to_string();
-                quote! { ::tg_message_builder::Element::mention(#username_str) }
+                quote! { ::msg::Element::mention(#username_str) }
             }
             TgMessageItem::Hashtag(tag) => {
-                quote! { ::tg_message_builder::Element::hashtag(#tag) }
+                quote! { ::msg::Element::hashtag(#tag) }
             }
             TgMessageItem::HashtagHash(tag) => {
                 let tag_str = tag.to_string();
-                quote! { ::tg_message_builder::Element::hashtag(#tag_str) }
+                quote! { ::msg::Element::hashtag(#tag_str) }
             }
             TgMessageItem::List { style, items } => {
                 let style_expr = match style {
-                    ListStyle::Bullet => quote! { ::tg_message_builder::ListStyle::Bullet },
-                    ListStyle::Numbered => quote! { ::tg_message_builder::ListStyle::Numbered },
+                    ListStyle::Bullet => quote! { ::msg::ListStyle::Bullet },
+                    ListStyle::Numbered => quote! { ::msg::ListStyle::Numbered },
                     ListStyle::Custom(ident) => {
-                        quote! { ::tg_message_builder::ListStyle::Custom(#ident.to_string()) }
+                        quote! { ::msg::ListStyle::Custom(#ident.to_string()) }
                     }
                 };
 
                 let list_items = items.iter().map(|item| {
                     let elements = generate_elements(item);
                     quote! {
-                        ::tg_message_builder::ListItem {
+                        ::msg::ListItem {
                             content: vec![#(#elements),*],
                             nested: None,
                         }
@@ -396,7 +396,7 @@ impl ToTokens for TgMessageItem {
                 });
 
                 quote! {
-                    ::tg_message_builder::Element::List(::tg_message_builder::ListNode {
+                    ::msg::Element::List(::msg::ListNode {
                         style: #style_expr,
                         items: vec![#(#list_items),*],
                     })
@@ -405,9 +405,9 @@ impl ToTokens for TgMessageItem {
             TgMessageItem::Table { headers, rows } => {
                 let header_cells = headers.iter().map(|h| {
                     quote! {
-                        ::tg_message_builder::TableCell {
-                            content: vec![::tg_message_builder::Element::text(#h.to_string())],
-                            align: ::tg_message_builder::CellAlign::Left,
+                        ::msg::TableCell {
+                            content: vec![::msg::Element::text(#h.to_string())],
+                            align: ::msg::CellAlign::Left,
                             colspan: 1,
                             rowspan: 1,
                         }
@@ -417,26 +417,26 @@ impl ToTokens for TgMessageItem {
                 let table_rows = rows.iter().map(|row| {
                     let cells = row.iter().map(|cell| {
                         quote! {
-                            ::tg_message_builder::TableCell {
-                                content: vec![::tg_message_builder::Element::text(#cell.to_string())],
-                                align: ::tg_message_builder::CellAlign::Left,
+                            ::msg::TableCell {
+                                content: vec![::msg::Element::text(#cell.to_string())],
+                                align: ::msg::CellAlign::Left,
                                 colspan: 1,
                                 rowspan: 1,
                             }
                         }
                     });
                     quote! {
-                        ::tg_message_builder::TableRow {
+                        ::msg::TableRow {
                             cells: vec![#(#cells),*],
                         }
                     }
                 });
 
                 quote! {
-                    ::tg_message_builder::Element::Table(::tg_message_builder::TableNode {
+                    ::msg::Element::Table(::msg::TableNode {
                         headers: vec![#(#header_cells),*],
                         rows: vec![#(#table_rows),*],
-                        style: ::tg_message_builder::TableStyle::Unicode,
+                        style: ::msg::TableStyle::Unicode,
                         rules: Vec::new(),
                     })
                 }
@@ -468,7 +468,7 @@ impl ToTokens for TgMessageItem {
                             None => formatted
                         };
 
-                        ::tg_message_builder::Element::TextLink {
+                        ::msg::Element::TextLink {
                             text: full_number.clone(),
                             url: format!("tel:{}", full_number.replace(" ", "").replace("(", "").replace(")", "").replace("-", "")),
                         }
@@ -480,7 +480,7 @@ impl ToTokens for TgMessageItem {
                     {
                         use ::chrono::Datelike;
                         let date_value = #value;
-                        ::tg_message_builder::Element::text(
+                        ::msg::Element::text(
                             format!("{:04}-{:02}-{:02}", date_value.year(), date_value.month(), date_value.day())
                         )
                     }
@@ -491,7 +491,7 @@ impl ToTokens for TgMessageItem {
                     {
                         use ::chrono::{Datelike, Timelike};
                         let dt_value = #value;
-                        ::tg_message_builder::Element::text(
+                        ::msg::Element::text(
                             format!("{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
                                 dt_value.year(), dt_value.month(), dt_value.day(),
                                 dt_value.hour(), dt_value.minute(), dt_value.second()
@@ -505,14 +505,14 @@ impl ToTokens for TgMessageItem {
                     {
                         use ::chrono::Timelike;
                         let time_value = #value;
-                        ::tg_message_builder::Element::text(
+                        ::msg::Element::text(
                             format!("{:02}:{:02}:{:02}", time_value.hour(), time_value.minute(), time_value.second())
                         )
                     }
                 }
             }
             TgMessageItem::Expression(expr) => {
-                quote! { ::tg_message_builder::Element::text(#expr.to_string()) }
+                quote! { ::msg::Element::text(#expr.to_string()) }
             }
         };
 
@@ -547,7 +547,7 @@ pub fn msg(input: TokenStream) -> TokenStream {
             #(
                 let element = #elements;
                 match element {
-                    ::tg_message_builder::Element::Group(mut elements) => result.append(&mut elements),
+                    ::msg::Element::Group(mut elements) => result.append(&mut elements),
                     other => result.push(other),
                 }
             )*

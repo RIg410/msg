@@ -1,4 +1,4 @@
-use tg_message_builder::{el, msg, Generator, ParseMode};
+use msg::{msg, Generator, ParseMode};
 
 fn main() {
     let msg1 = msg!("Hello, World!");

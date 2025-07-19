@@ -1,5 +1,5 @@
 #![recursion_limit = "256"]
-use tg_message_builder::*;
+use msg::*;
 
 fn main() {
     let message = msg! {

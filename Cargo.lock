@@ -384,6 +384,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32a282da65faaf38286cf3be983213fcf1d2e2a58700e808f83f4ea9a4804bc0"
 
 [[package]]
+name = "msg"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "criterion",
+ "lazy_static",
+ "msg-macro",
+ "pretty_assertions",
+ "proptest",
+ "regex",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "msg-macro"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "num-traits"
 version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -694,30 +718,6 @@ dependencies = [
  "once_cell",
  "rustix",
  "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "tg-message-builder"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "criterion",
- "lazy_static",
- "pretty_assertions",
- "proptest",
- "regex",
- "serde",
- "tg-message-macro",
- "thiserror",
-]
-
-[[package]]
-name = "tg-message-macro"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]

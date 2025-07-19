@@ -1,5 +1,5 @@
 [package]
-name = "tg-message-macro"
+name = "msg-macro"
 version = "0.1.0"
 edition = "2021"
 

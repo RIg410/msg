@@ -1,4 +1,4 @@
-use tg_message_builder::*;
+use msg::*;
 
 fn main() {
     let msg1 = msg! { "Hello, world!" };

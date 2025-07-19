@@ -56,47 +56,64 @@ enum ListStyle {
 impl Parse for TgMessageItem {
     fn parse(input: ParseStream) -> Result<Self> {
         if input.peek(Ident) {
-            let ident: Ident = input.parse()?;
+            // First, check if this is a known keyword by peeking ahead
+            let fork = input.fork();
+            let ident: Ident = fork.parse()?;
             let name = ident.to_string();
+            
+            // Check if this is a known keyword that might have parentheses
+            let has_parens = fork.peek(token::Paren);
+            
+            // Check if next token is something that makes this an expression (like '.')
+            let is_expression = fork.peek(Token![.]) || fork.peek(Token![::]);
 
-            match name.as_str() {
-                "bold" => {
-                    let content;
-                    syn::braced!(content in input);
-                    let items = parse_message_items(&content)?;
-                    Ok(TgMessageItem::Bold(items))
-                }
-                "italic" => {
-                    let content;
-                    syn::braced!(content in input);
-                    let items = parse_message_items(&content)?;
-                    Ok(TgMessageItem::Italic(items))
-                }
+            if !is_expression && (matches!(name.as_str(), "bold" | "italic" | "underline" | "strikethrough" | "spoiler" | "code" | "pre" | "link" | "mention" | "hashtag" | "list" | "table" | "date" | "datetime" | "time") || has_parens) {
+                match name.as_str() {
+                    "bold" => {
+                        // Now consume the actual identifier from input
+                        let _: Ident = input.parse()?;
+                        let content;
+                        syn::braced!(content in input);
+                        let items = parse_message_items(&content)?;
+                        Ok(TgMessageItem::Bold(items))
+                    }
+                    "italic" => {
+                        let _: Ident = input.parse()?;
+                        let content;
+                        syn::braced!(content in input);
+                        let items = parse_message_items(&content)?;
+                        Ok(TgMessageItem::Italic(items))
+                    }
                 "underline" => {
+                    let _: Ident = input.parse()?;
                     let content;
                     syn::braced!(content in input);
                     let items = parse_message_items(&content)?;
                     Ok(TgMessageItem::Underline(items))
                 }
                 "strikethrough" => {
+                    let _: Ident = input.parse()?;
                     let content;
                     syn::braced!(content in input);
                     let items = parse_message_items(&content)?;
                     Ok(TgMessageItem::Strikethrough(items))
                 }
                 "spoiler" => {
+                    let _: Ident = input.parse()?;
                     let content;
                     syn::braced!(content in input);
                     let items = parse_message_items(&content)?;
                     Ok(TgMessageItem::Spoiler(items))
                 }
                 "code" => {
+                    let _: Ident = input.parse()?;
                     let content;
                     syn::braced!(content in input);
                     let text: Lit = content.parse()?;
                     Ok(TgMessageItem::Code(text))
                 }
                 "pre" => {
+                    let _: Ident = input.parse()?;
                     let lang = if input.peek(token::Paren) {
                         let content;
                         syn::parenthesized!(content in input);
@@ -109,28 +126,32 @@ impl Parse for TgMessageItem {
                     let code: Lit = content.parse()?;
                     Ok(TgMessageItem::Pre { code, lang })
                 }
-                "link" => {
-                    let content;
-                    syn::parenthesized!(content in input);
-                    let url: Expr = content.parse()?;
-                    let content;
-                    syn::braced!(content in input);
-                    let text = parse_message_items(&content)?;
-                    Ok(TgMessageItem::Link { text, url })
-                }
+                    "link" => {
+                        let _: Ident = input.parse()?;
+                        let content;
+                        syn::parenthesized!(content in input);
+                        let url: Expr = content.parse()?;
+                        let content;
+                        syn::braced!(content in input);
+                        let text = parse_message_items(&content)?;
+                        Ok(TgMessageItem::Link { text, url })
+                    }
                 "mention" => {
+                    let _: Ident = input.parse()?;
                     let content;
                     syn::braced!(content in input);
                     let username: Expr = content.parse()?;
                     Ok(TgMessageItem::Mention(username))
                 }
                 "hashtag" => {
+                    let _: Ident = input.parse()?;
                     let content;
                     syn::braced!(content in input);
                     let tag: Expr = content.parse()?;
                     Ok(TgMessageItem::Hashtag(tag))
                 }
                 "list" => {
+                    let _: Ident = input.parse()?;
                     let style = if input.peek(token::Paren) {
                         let content;
                         syn::parenthesized!(content in input);
@@ -150,6 +171,7 @@ impl Parse for TgMessageItem {
                     Ok(TgMessageItem::List { style, items })
                 }
                 "table" => {
+                    let _: Ident = input.parse()?;
                     let content;
                     syn::braced!(content in input);
 
@@ -179,28 +201,36 @@ impl Parse for TgMessageItem {
                     Ok(TgMessageItem::Table { headers, rows })
                 }
                 "date" => {
+                    let _: Ident = input.parse()?;
                     let content;
                     syn::parenthesized!(content in input);
                     let value: Expr = content.parse()?;
                     Ok(TgMessageItem::Date(value))
                 }
                 "datetime" => {
+                    let _: Ident = input.parse()?;
                     let content;
                     syn::parenthesized!(content in input);
                     let value: Expr = content.parse()?;
                     Ok(TgMessageItem::DateTime(value))
                 }
                 "time" => {
+                    let _: Ident = input.parse()?;
                     let content;
                     syn::parenthesized!(content in input);
                     let value: Expr = content.parse()?;
                     Ok(TgMessageItem::Time(value))
                 }
-                _ => Ok(TgMessageItem::Expression(Expr::Path(syn::ExprPath {
-                    attrs: vec![],
-                    qself: None,
-                    path: ident.into(),
-                }))),
+                    _ => {
+                        // This is not a known keyword, parse as expression
+                        let expr: Expr = input.parse()?;
+                        Ok(TgMessageItem::Expression(expr))
+                    }
+                }
+            } else {
+                // This is an expression (has . or :: after identifier)
+                let expr: Expr = input.parse()?;
+                Ok(TgMessageItem::Expression(expr))
             }
         } else if input.peek(Token![@]) {
             input.parse::<Token![@]>()?;

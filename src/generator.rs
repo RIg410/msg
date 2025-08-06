@@ -42,7 +42,12 @@ impl Generator {
         self.generate_element(writer, element, self.mode)
     }
 
-    fn generate_element<W: Write>(&self, writer: &mut W, element: &Element, mode: ParseMode) -> Result<()> {
+    fn generate_element<W: Write>(
+        &self,
+        writer: &mut W,
+        element: &Element,
+        mode: ParseMode,
+    ) -> Result<()> {
         match element {
             Element::Text(text) => write_fmt!(writer, "{}", escape_text(text, mode)),
 
@@ -80,15 +85,24 @@ impl Generator {
             Element::Pre(block) => match mode {
                 ParseMode::MarkdownV2 => {
                     if let Some(lang) = &block.language {
-                        write_fmt!(writer, "```{}\n{}\n```", lang, escape_pre(block.code.as_str()))
+                        write_fmt!(
+                            writer,
+                            "```{}\n{}\n```",
+                            lang,
+                            escape_pre(block.code.as_str())
+                        )
                     } else {
                         write_fmt!(writer, "```\n{}\n```", escape_pre(block.code.as_str()))
                     }
                 }
                 ParseMode::Html => {
                     if let Some(lang) = &block.language {
-                        write_fmt!(writer, "<pre><code class=\"language-{}\">{}</code></pre>",
-                            escape_html(lang), escape_html(&block.code))
+                        write_fmt!(
+                            writer,
+                            "<pre><code class=\"language-{}\">{}</code></pre>",
+                            escape_html(lang),
+                            escape_html(&block.code)
+                        )
                     } else {
                         write_fmt!(writer, "<pre>{}</pre>", escape_html(&block.code))
                     }
@@ -134,31 +148,46 @@ impl Generator {
                 Ok(())
             }
 
-            Element::Link { text, url } => {
-                match mode {
-                    ParseMode::MarkdownV2 => {
-                        write_fmt!(writer, "[")?;
-                        self.generate_elements(writer, text, mode)?;
-                        write_fmt!(writer, "]({})", escape_url(url))
-                    }
-                    ParseMode::Html => {
-                        write_fmt!(writer, "<a href=\"{}\">", escape_html(url))?;
-                        self.generate_elements(writer, text, mode)?;
-                        write_fmt!(writer, "</a>")
-                    }
+            Element::Link { text, url } => match mode {
+                ParseMode::MarkdownV2 => {
+                    write_fmt!(writer, "[")?;
+                    self.generate_elements(writer, text, mode)?;
+                    write_fmt!(writer, "]({})", escape_url(url))
                 }
-            }
+                ParseMode::Html => {
+                    write_fmt!(writer, "<a href=\"{}\">", escape_html(url))?;
+                    self.generate_elements(writer, text, mode)?;
+                    write_fmt!(writer, "</a>")
+                }
+            },
 
             Element::TextLink { text, url } => match mode {
-                ParseMode::MarkdownV2 => write_fmt!(writer, "[{}]({})", escape_text(text, mode), escape_url(url)),
-                ParseMode::Html => write_fmt!(writer, "<a href=\"{}\">{}</a>", escape_html(url), escape_html(text)),
+                ParseMode::MarkdownV2 => {
+                    write_fmt!(writer, "[{}]({})", escape_text(text, mode), escape_url(url))
+                }
+                ParseMode::Html => write_fmt!(
+                    writer,
+                    "<a href=\"{}\">{}</a>",
+                    escape_html(url),
+                    escape_html(text)
+                ),
             },
 
             Element::Mention { username } => write_fmt!(writer, "@{}", username),
 
             Element::MentionId { user_id, text } => match mode {
-                ParseMode::MarkdownV2 => write_fmt!(writer, "[{}](tg://user?id={})", escape_text(text, mode), user_id),
-                ParseMode::Html => write_fmt!(writer, "<a href=\"tg://user?id={}\">{}</a>", user_id, escape_html(text)),
+                ParseMode::MarkdownV2 => write_fmt!(
+                    writer,
+                    "[{}](tg://user?id={})",
+                    escape_text(text, mode),
+                    user_id
+                ),
+                ParseMode::Html => write_fmt!(
+                    writer,
+                    "<a href=\"tg://user?id={}\">{}</a>",
+                    user_id,
+                    escape_html(text)
+                ),
             },
 
             Element::Hashtag(tag) => write_fmt!(writer, "#{}", tag),
@@ -175,28 +204,28 @@ impl Generator {
 
             Element::CustomEmoji { emoji, id } => match mode {
                 ParseMode::MarkdownV2 => write_fmt!(writer, "![{}](tg://emoji?id={})", emoji, id),
-                ParseMode::Html => write_fmt!(writer, "<tg-emoji emoji-id=\"{}\">{}</tg-emoji>", id, emoji),
+                ParseMode::Html => {
+                    write_fmt!(writer, "<tg-emoji emoji-id=\"{}\">{}</tg-emoji>", id, emoji)
+                }
             },
 
             Element::List(list) => self.generate_list(writer, list, mode),
 
             Element::Table(table) => self.generate_table(writer, table, mode),
 
-            Element::Quote(elements) => {
-                match mode {
-                    ParseMode::MarkdownV2 => {
-                        let mut temp = String::new();
-                        self.generate_elements(&mut temp, elements, mode)?;
-                        let quoted = temp.lines().collect::<Vec<_>>().join("\n>");
-                        write_fmt!(writer, ">{}", quoted)
-                    }
-                    ParseMode::Html => {
-                        write_fmt!(writer, "<blockquote>")?;
-                        self.generate_elements(writer, elements, mode)?;
-                        write_fmt!(writer, "</blockquote>")
-                    }
+            Element::Quote(elements) => match mode {
+                ParseMode::MarkdownV2 => {
+                    let mut temp = String::new();
+                    self.generate_elements(&mut temp, elements, mode)?;
+                    let quoted = temp.lines().collect::<Vec<_>>().join("\n>");
+                    write_fmt!(writer, ">{}", quoted)
                 }
-            }
+                ParseMode::Html => {
+                    write_fmt!(writer, "<blockquote>")?;
+                    self.generate_elements(writer, elements, mode)?;
+                    write_fmt!(writer, "</blockquote>")
+                }
+            },
 
             Element::Custom { formatter, value } => {
                 if let Some(fmt) = self.formatters.get(formatter) {
@@ -211,14 +240,24 @@ impl Generator {
         }
     }
 
-    fn generate_elements<W: Write>(&self, writer: &mut W, elements: &[Element], mode: ParseMode) -> Result<()> {
+    fn generate_elements<W: Write>(
+        &self,
+        writer: &mut W,
+        elements: &[Element],
+        mode: ParseMode,
+    ) -> Result<()> {
         for element in elements {
             self.generate_element(writer, element, mode)?;
         }
         Ok(())
     }
 
-    fn generate_list<W: Write>(&self, writer: &mut W, list: &ListNode, mode: ParseMode) -> Result<()> {
+    fn generate_list<W: Write>(
+        &self,
+        writer: &mut W,
+        list: &ListNode,
+        mode: ParseMode,
+    ) -> Result<()> {
         for (i, item) in list.items.iter().enumerate() {
             let prefix = match &list.style {
                 ListStyle::Bullet => "• ".to_string(),
@@ -248,7 +287,12 @@ impl Generator {
         Ok(())
     }
 
-    fn generate_table<W: Write>(&self, writer: &mut W, table: &TableNode, mode: ParseMode) -> Result<()> {
+    fn generate_table<W: Write>(
+        &self,
+        writer: &mut W,
+        table: &TableNode,
+        mode: ParseMode,
+    ) -> Result<()> {
         let all_rows: Vec<&[TableCell]> = std::iter::once(table.headers.as_slice())
             .chain(table.rows.iter().map(|r| r.cells.as_slice()))
             .collect();
@@ -270,7 +314,9 @@ impl Generator {
         col_widths: &[usize],
         mode: ParseMode,
     ) -> Result<()> {
-        write_fmt!(writer, "```\n┌{}┐\n",
+        write_fmt!(
+            writer,
+            "```\n┌{}┐\n",
             col_widths
                 .iter()
                 .map(|&w| "─".repeat(w + 2))
@@ -279,7 +325,9 @@ impl Generator {
         )?;
 
         self.format_table_row(writer, &table.headers, col_widths, mode, "│")?;
-        write_fmt!(writer, "\n├{}┤\n",
+        write_fmt!(
+            writer,
+            "\n├{}┤\n",
             col_widths
                 .iter()
                 .map(|&w| "─".repeat(w + 2))
@@ -292,7 +340,9 @@ impl Generator {
             write_fmt!(writer, "\n")?;
         }
 
-        write_fmt!(writer, "└{}┘\n```",
+        write_fmt!(
+            writer,
+            "└{}┘\n```",
             col_widths
                 .iter()
                 .map(|&w| "─".repeat(w + 2))
@@ -310,7 +360,9 @@ impl Generator {
         col_widths: &[usize],
         mode: ParseMode,
     ) -> Result<()> {
-        write_fmt!(writer, "```\n+{}+\n",
+        write_fmt!(
+            writer,
+            "```\n+{}+\n",
             col_widths
                 .iter()
                 .map(|&w| "-".repeat(w + 2))
@@ -319,7 +371,9 @@ impl Generator {
         )?;
 
         self.format_table_row(writer, &table.headers, col_widths, mode, "|")?;
-        write_fmt!(writer, "\n+{}+\n",
+        write_fmt!(
+            writer,
+            "\n+{}+\n",
             col_widths
                 .iter()
                 .map(|&w| "-".repeat(w + 2))
@@ -332,7 +386,9 @@ impl Generator {
             write_fmt!(writer, "\n")?;
         }
 
-        write_fmt!(writer, "+{}+\n```",
+        write_fmt!(
+            writer,
+            "+{}+\n```",
             col_widths
                 .iter()
                 .map(|&w| "-".repeat(w + 2))
@@ -353,7 +409,9 @@ impl Generator {
         write_fmt!(writer, "```\n")?;
 
         self.format_table_row(writer, &table.headers, col_widths, mode, " ")?;
-        write_fmt!(writer, "\n{}\n",
+        write_fmt!(
+            writer,
+            "\n{}\n",
             col_widths
                 .iter()
                 .map(|&w| "─".repeat(w))

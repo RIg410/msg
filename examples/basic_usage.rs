@@ -23,7 +23,7 @@ fn main() {
     let mut output = String::new();
     for element in &message {
         match generator.generate(&mut output, element) {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => eprintln!("Error: {}", e),
         }
     }
@@ -34,7 +34,7 @@ fn main() {
     println!("\nHTML version:");
     for element in &message {
         match html_generator.generate(&mut html_output, element) {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(e) => eprintln!("Error: {}", e),
         }
     }

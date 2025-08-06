@@ -76,7 +76,7 @@ fn main() {
     let mut output = String::new();
     for element in &msg2 {
         match generator.generate(&mut output, element) {
-            Ok(()) => {},
+            Ok(()) => {}
             Err(e) => println!("Error: {}", e),
         }
     }

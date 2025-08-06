@@ -28,6 +28,7 @@ enum TgMessageItem {
     MentionAt(Ident),
     Hashtag(Expr),
     HashtagHash(Ident),
+    MessageReference(Expr), // Added for #msg syntax
     List {
         style: ListStyle,
         items: Vec<Vec<TgMessageItem>>,
@@ -60,14 +61,33 @@ impl Parse for TgMessageItem {
             let fork = input.fork();
             let ident: Ident = fork.parse()?;
             let name = ident.to_string();
-            
+
             // Check if this is a known keyword that might have parentheses
             let has_parens = fork.peek(token::Paren);
-            
+
             // Check if next token is something that makes this an expression (like '.')
             let is_expression = fork.peek(Token![.]) || fork.peek(Token![::]);
 
-            if !is_expression && (matches!(name.as_str(), "bold" | "italic" | "underline" | "strikethrough" | "spoiler" | "code" | "pre" | "link" | "mention" | "hashtag" | "list" | "table" | "date" | "datetime" | "time") || has_parens) {
+            if !is_expression
+                && (matches!(
+                    name.as_str(),
+                    "bold"
+                        | "italic"
+                        | "underline"
+                        | "strikethrough"
+                        | "spoiler"
+                        | "code"
+                        | "pre"
+                        | "link"
+                        | "mention"
+                        | "hashtag"
+                        | "list"
+                        | "table"
+                        | "date"
+                        | "datetime"
+                        | "time"
+                ) || has_parens)
+            {
                 match name.as_str() {
                     "bold" => {
                         // Now consume the actual identifier from input
@@ -84,48 +104,48 @@ impl Parse for TgMessageItem {
                         let items = parse_message_items(&content)?;
                         Ok(TgMessageItem::Italic(items))
                     }
-                "underline" => {
-                    let _: Ident = input.parse()?;
-                    let content;
-                    syn::braced!(content in input);
-                    let items = parse_message_items(&content)?;
-                    Ok(TgMessageItem::Underline(items))
-                }
-                "strikethrough" => {
-                    let _: Ident = input.parse()?;
-                    let content;
-                    syn::braced!(content in input);
-                    let items = parse_message_items(&content)?;
-                    Ok(TgMessageItem::Strikethrough(items))
-                }
-                "spoiler" => {
-                    let _: Ident = input.parse()?;
-                    let content;
-                    syn::braced!(content in input);
-                    let items = parse_message_items(&content)?;
-                    Ok(TgMessageItem::Spoiler(items))
-                }
-                "code" => {
-                    let _: Ident = input.parse()?;
-                    let content;
-                    syn::braced!(content in input);
-                    let text: Lit = content.parse()?;
-                    Ok(TgMessageItem::Code(text))
-                }
-                "pre" => {
-                    let _: Ident = input.parse()?;
-                    let lang = if input.peek(token::Paren) {
+                    "underline" => {
+                        let _: Ident = input.parse()?;
                         let content;
-                        syn::parenthesized!(content in input);
-                        Some(content.parse::<Lit>()?)
-                    } else {
-                        None
-                    };
-                    let content;
-                    syn::braced!(content in input);
-                    let code: Lit = content.parse()?;
-                    Ok(TgMessageItem::Pre { code, lang })
-                }
+                        syn::braced!(content in input);
+                        let items = parse_message_items(&content)?;
+                        Ok(TgMessageItem::Underline(items))
+                    }
+                    "strikethrough" => {
+                        let _: Ident = input.parse()?;
+                        let content;
+                        syn::braced!(content in input);
+                        let items = parse_message_items(&content)?;
+                        Ok(TgMessageItem::Strikethrough(items))
+                    }
+                    "spoiler" => {
+                        let _: Ident = input.parse()?;
+                        let content;
+                        syn::braced!(content in input);
+                        let items = parse_message_items(&content)?;
+                        Ok(TgMessageItem::Spoiler(items))
+                    }
+                    "code" => {
+                        let _: Ident = input.parse()?;
+                        let content;
+                        syn::braced!(content in input);
+                        let text: Lit = content.parse()?;
+                        Ok(TgMessageItem::Code(text))
+                    }
+                    "pre" => {
+                        let _: Ident = input.parse()?;
+                        let lang = if input.peek(token::Paren) {
+                            let content;
+                            syn::parenthesized!(content in input);
+                            Some(content.parse::<Lit>()?)
+                        } else {
+                            None
+                        };
+                        let content;
+                        syn::braced!(content in input);
+                        let code: Lit = content.parse()?;
+                        Ok(TgMessageItem::Pre { code, lang })
+                    }
                     "link" => {
                         let _: Ident = input.parse()?;
                         let content;
@@ -136,91 +156,92 @@ impl Parse for TgMessageItem {
                         let text = parse_message_items(&content)?;
                         Ok(TgMessageItem::Link { text, url })
                     }
-                "mention" => {
-                    let _: Ident = input.parse()?;
-                    let content;
-                    syn::braced!(content in input);
-                    let username: Expr = content.parse()?;
-                    Ok(TgMessageItem::Mention(username))
-                }
-                "hashtag" => {
-                    let _: Ident = input.parse()?;
-                    let content;
-                    syn::braced!(content in input);
-                    let tag: Expr = content.parse()?;
-                    Ok(TgMessageItem::Hashtag(tag))
-                }
-                "list" => {
-                    let _: Ident = input.parse()?;
-                    let style = if input.peek(token::Paren) {
+                    "mention" => {
+                        let _: Ident = input.parse()?;
+                        let content;
+                        syn::braced!(content in input);
+                        let username: Expr = content.parse()?;
+                        Ok(TgMessageItem::Mention(username))
+                    }
+                    "hashtag" => {
+                        let _: Ident = input.parse()?;
+                        let content;
+                        syn::braced!(content in input);
+                        let tag: Expr = content.parse()?;
+                        Ok(TgMessageItem::Hashtag(tag))
+                    }
+                    "list" => {
+                        let _: Ident = input.parse()?;
+                        let style = if input.peek(token::Paren) {
+                            let content;
+                            syn::parenthesized!(content in input);
+                            let style_ident: Ident = content.parse()?;
+                            match style_ident.to_string().as_str() {
+                                "bullet" => ListStyle::Bullet,
+                                "numbered" => ListStyle::Numbered,
+                                _ => ListStyle::Custom(style_ident),
+                            }
+                        } else {
+                            ListStyle::Bullet
+                        };
+
+                        let content;
+                        syn::braced!(content in input);
+                        let items = parse_list_items(&content)?;
+                        Ok(TgMessageItem::List { style, items })
+                    }
+                    "table" => {
+                        let _: Ident = input.parse()?;
+                        let content;
+                        syn::braced!(content in input);
+
+                        let _: Ident = content.parse()?;
+                        let _: Token![:] = content.parse()?;
+                        let headers_content;
+                        syn::bracketed!(headers_content in content);
+                        let headers =
+                            Punctuated::<Expr, Token![,]>::parse_terminated(&headers_content)?
+                                .into_iter()
+                                .collect();
+
+                        let _: Ident = content.parse()?;
+                        let _: Token![:] = content.parse()?;
+                        let rows_content;
+                        syn::bracketed!(rows_content in content);
+                        let mut rows = Vec::new();
+                        while !rows_content.is_empty() {
+                            let row_content;
+                            syn::bracketed!(row_content in rows_content);
+                            let row =
+                                Punctuated::<Expr, Token![,]>::parse_terminated(&row_content)?
+                                    .into_iter()
+                                    .collect();
+                            rows.push(row);
+                        }
+
+                        Ok(TgMessageItem::Table { headers, rows })
+                    }
+                    "date" => {
+                        let _: Ident = input.parse()?;
                         let content;
                         syn::parenthesized!(content in input);
-                        let style_ident: Ident = content.parse()?;
-                        match style_ident.to_string().as_str() {
-                            "bullet" => ListStyle::Bullet,
-                            "numbered" => ListStyle::Numbered,
-                            _ => ListStyle::Custom(style_ident),
-                        }
-                    } else {
-                        ListStyle::Bullet
-                    };
-
-                    let content;
-                    syn::braced!(content in input);
-                    let items = parse_list_items(&content)?;
-                    Ok(TgMessageItem::List { style, items })
-                }
-                "table" => {
-                    let _: Ident = input.parse()?;
-                    let content;
-                    syn::braced!(content in input);
-
-                    let _: Ident = content.parse()?;
-                    let _: Token![:] = content.parse()?;
-                    let headers_content;
-                    syn::bracketed!(headers_content in content);
-                    let headers =
-                        Punctuated::<Expr, Token![,]>::parse_terminated(&headers_content)?
-                            .into_iter()
-                            .collect();
-
-                    let _: Ident = content.parse()?;
-                    let _: Token![:] = content.parse()?;
-                    let rows_content;
-                    syn::bracketed!(rows_content in content);
-                    let mut rows = Vec::new();
-                    while !rows_content.is_empty() {
-                        let row_content;
-                        syn::bracketed!(row_content in rows_content);
-                        let row = Punctuated::<Expr, Token![,]>::parse_terminated(&row_content)?
-                            .into_iter()
-                            .collect();
-                        rows.push(row);
+                        let value: Expr = content.parse()?;
+                        Ok(TgMessageItem::Date(value))
                     }
-
-                    Ok(TgMessageItem::Table { headers, rows })
-                }
-                "date" => {
-                    let _: Ident = input.parse()?;
-                    let content;
-                    syn::parenthesized!(content in input);
-                    let value: Expr = content.parse()?;
-                    Ok(TgMessageItem::Date(value))
-                }
-                "datetime" => {
-                    let _: Ident = input.parse()?;
-                    let content;
-                    syn::parenthesized!(content in input);
-                    let value: Expr = content.parse()?;
-                    Ok(TgMessageItem::DateTime(value))
-                }
-                "time" => {
-                    let _: Ident = input.parse()?;
-                    let content;
-                    syn::parenthesized!(content in input);
-                    let value: Expr = content.parse()?;
-                    Ok(TgMessageItem::Time(value))
-                }
+                    "datetime" => {
+                        let _: Ident = input.parse()?;
+                        let content;
+                        syn::parenthesized!(content in input);
+                        let value: Expr = content.parse()?;
+                        Ok(TgMessageItem::DateTime(value))
+                    }
+                    "time" => {
+                        let _: Ident = input.parse()?;
+                        let content;
+                        syn::parenthesized!(content in input);
+                        let value: Expr = content.parse()?;
+                        Ok(TgMessageItem::Time(value))
+                    }
                     _ => {
                         // This is not a known keyword, parse as expression
                         let expr: Expr = input.parse()?;
@@ -238,8 +259,33 @@ impl Parse for TgMessageItem {
             Ok(TgMessageItem::MentionAt(username))
         } else if input.peek(Token![#]) {
             input.parse::<Token![#]>()?;
-            let tag: Ident = input.parse()?;
-            Ok(TgMessageItem::HashtagHash(tag))
+            // Check if this is a message reference (expression) or a hashtag (identifier)
+            if input.peek(Ident) {
+                // Check if the identifier might be a variable (message reference)
+                let fork = input.fork();
+                let _ident: Ident = fork.parse()?;
+                // If next token suggests this is an expression (e.g., field access), parse as expression
+                if fork.peek(Token![.]) || fork.peek(Token![::]) || fork.peek(token::Paren) {
+                    let expr: Expr = input.parse()?;
+                    Ok(TgMessageItem::MessageReference(expr))
+                } else {
+                    // Simple identifier - could be either hashtag or message reference
+                    // We'll treat simple identifiers as message references if they don't start with uppercase
+                    let ident: Ident = input.parse()?;
+                    let name = ident.to_string();
+                    if name.chars().next().map_or(false, |c| c.is_uppercase()) {
+                        // Likely a hashtag
+                        Ok(TgMessageItem::HashtagHash(ident))
+                    } else {
+                        // Likely a variable reference
+                        Ok(TgMessageItem::MessageReference(syn::parse_quote!(#ident)))
+                    }
+                }
+            } else {
+                // Not an identifier after #, parse as expression
+                let expr: Expr = input.parse()?;
+                Ok(TgMessageItem::MessageReference(expr))
+            }
         } else if input.peek(Token![+]) {
             // Parse phone number format: +7(phone), +8(phone), +(phone)
             input.parse::<Token![+]>()?;
@@ -544,6 +590,11 @@ impl ToTokens for TgMessageItem {
             TgMessageItem::Expression(expr) => {
                 quote! { ::msg::Element::text(#expr.to_string()) }
             }
+            TgMessageItem::MessageReference(expr) => {
+                // Don't wrap in Element here, just return the expression
+                // The msg! macro will handle flattening
+                quote! { #expr }
+            }
         };
 
         tokens.extend(result);
@@ -551,7 +602,18 @@ impl ToTokens for TgMessageItem {
 }
 
 fn generate_elements(items: &[TgMessageItem]) -> Vec<proc_macro2::TokenStream> {
-    items.iter().map(|item| quote! { #item }).collect()
+    items
+        .iter()
+        .map(|item| {
+            match item {
+                TgMessageItem::MessageReference(_) => {
+                    // For message references, we want to expand the vector inline
+                    quote! { #item }
+                }
+                _ => quote! { #item },
+            }
+        })
+        .collect()
 }
 
 struct TgMessage {
@@ -569,18 +631,38 @@ impl Parse for TgMessage {
 pub fn msg(input: TokenStream) -> TokenStream {
     let message = parse_macro_input!(input as TgMessage);
 
-    let elements = message.items.iter().map(|item| quote! { #item });
+    let elements = message.items.iter().map(|item| {
+        match item {
+            TgMessageItem::MessageReference(expr) => {
+                // For message references, we directly extend from the vector
+                quote! {
+                    {
+                        let referenced_items = #expr;
+                        for item in referenced_items {
+                            result.push(item);
+                        }
+                    }
+                }
+            }
+            _ => {
+                // For normal items, convert to Element and push
+                quote! {
+                    {
+                        let element = #item;
+                        match element {
+                            ::msg::Element::Group(mut elements) => result.append(&mut elements),
+                            other => result.push(other),
+                        }
+                    }
+                }
+            }
+        }
+    });
 
     let output = quote! {
         {
             let mut result = Vec::new();
-            #(
-                let element = #elements;
-                match element {
-                    ::msg::Element::Group(mut elements) => result.append(&mut elements),
-                    other => result.push(other),
-                }
-            )*
+            #(#elements)*
             result
         }
     };

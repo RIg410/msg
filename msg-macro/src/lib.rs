@@ -293,7 +293,7 @@ impl Parse for TgMessageItem {
                 let lit: syn::LitInt = input.parse()?;
                 Some(format!("+{}", lit.base10_parse::<u32>()?))
             } else {
-                Some("+".to_string())
+                None
             };
             let content;
             syn::parenthesized!(content in input);
@@ -519,34 +519,104 @@ impl ToTokens for TgMessageItem {
             }
             TgMessageItem::Phone { prefix, number } => {
                 let prefix_expr = match prefix {
-                    Some(p) => quote! { Some(#p) },
-                    None => quote! { None },
+                    Some(p) => quote! { Some(#p.to_string()) },
+                    None => quote! { None::<String> },
                 };
                 quote! {
                     {
                         let phone_str = #number.to_string();
-                        // Remove non-digit characters
-                        let digits: String = phone_str.chars().filter(|c| c.is_digit(10)).collect();
-
-                        // Format as (XXX) XXX-XX-XX
-                        let formatted = if digits.len() >= 10 {
-                            let area = &digits[0..3];
-                            let prefix_part = &digits[3..6];
-                            let part1 = &digits[6..8];
-                            let part2 = &digits[8..10];
-                            format!("({}) {}-{}-{}", area, prefix_part, part1, part2)
+                        
+                        // Handle empty string
+                        if phone_str.is_empty() {
+                            ::msg::Element::Text("-".to_string())
                         } else {
-                            digits
-                        };
+                            // Remove non-digit characters
+                            let digits: String = phone_str.chars().filter(|c| c.is_digit(10)).collect();
+                            
+                            // Return "-" if no digits
+                            if digits.is_empty() {
+                                ::msg::Element::Text("-".to_string())
+                            } else {
+                                // Determine the actual prefix and format accordingly
+                                let (final_prefix, phone_digits, tel_prefix) = match #prefix_expr {
+                                    Some(prefix) => {
+                                        // If prefix is provided explicitly (e.g., +7), use it
+                                        (prefix.clone(), digits.clone(), format!("{}{}", prefix.replace("+", ""), digits))
+                                    }
+                                    None => {
+                                        // If +(phone) format, check if number starts with 7 or 8
+                                        if digits.len() == 11 && digits.starts_with("7") {
+                                            // Russian number format with 7: extract country code
+                                            ("+7".to_string(), digits[1..].to_string(), format!("7{}", &digits[1..]))
+                                        } else if digits.len() == 11 && digits.starts_with("8") {
+                                            // Russian number format with 8: convert to +7
+                                            ("+7".to_string(), digits[1..].to_string(), format!("7{}", &digits[1..]))
+                                        } else if digits.len() == 10 {
+                                            // Assume it's a local number without country code, default to +7
+                                            ("+7".to_string(), digits.clone(), format!("7{}", digits))
+                                        } else {
+                                            // Other format, use as is with +
+                                            ("+".to_string(), digits.clone(), digits.clone())
+                                        }
+                                    }
+                                };
 
-                        let full_number = match #prefix_expr {
-                            Some(prefix) => format!("{} {}", prefix, formatted),
-                            None => formatted
-                        };
+                                // Format the phone number if we have enough digits
+                                let formatted = if phone_digits.len() == 10 {
+                                    // Format as (XXX) XXX-XX-XX for 10-digit numbers
+                                    let area = &phone_digits[0..3];
+                                    let prefix_part = &phone_digits[3..6];
+                                    let part1 = &phone_digits[6..8];
+                                    let part2 = &phone_digits[8..10];
+                                    // Check if prefix was explicitly provided (e.g., +7(phone))
+                                    let space_after_prefix = if #prefix_expr.is_some() { " " } else { "" };
+                                    format!("{}{}({}) {}-{}-{}", final_prefix, space_after_prefix, area, prefix_part, part1, part2)
+                                } else if phone_digits.len() >= 7 {
+                                    // Format with dashes for other lengths >= 7
+                                    let area_len = 3.min(phone_digits.len());
+                                    let area = &phone_digits[0..area_len];
+                                    let rest = &phone_digits[area_len..];
+                                    
+                                    // Split rest into chunks with dashes
+                                    let mut formatted_rest = String::new();
+                                    let mut chars = rest.chars();
+                                    
+                                    // First chunk of 3 digits if available
+                                    if rest.len() >= 3 {
+                                        for _ in 0..3 {
+                                            if let Some(c) = chars.next() {
+                                                formatted_rest.push(c);
+                                            }
+                                        }
+                                        // Add remaining digits with dashes every 2 digits
+                                        let remaining: String = chars.collect();
+                                        if !remaining.is_empty() {
+                                            formatted_rest.push('-');
+                                            for (i, c) in remaining.chars().enumerate() {
+                                                if i > 0 && i % 2 == 0 {
+                                                    formatted_rest.push('-');
+                                                }
+                                                formatted_rest.push(c);
+                                            }
+                                        }
+                                    } else {
+                                        formatted_rest = rest.to_string();
+                                    }
+                                    
+                                    format!("{}({}) {}", final_prefix, area, formatted_rest)
+                                } else {
+                                    // Short number, return without formatting
+                                    format!("{}{}", final_prefix, phone_digits)
+                                };
 
-                        ::msg::Element::TextLink {
-                            text: full_number.clone(),
-                            url: format!("tel:{}", full_number.replace(" ", "").replace("(", "").replace(")", "").replace("-", "")),
+                                // Create tel: URL with proper prefix
+                                let tel_url = format!("tel:+{}", tel_prefix);
+                                
+                                ::msg::Element::TextLink {
+                                    text: formatted,
+                                    url: tel_url,
+                                }
+                            }
                         }
                     }
                 }

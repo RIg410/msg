@@ -366,3 +366,188 @@ mod generator_tests {
         assert!(generated.contains("`code`"));
     }
 }
+
+#[cfg(test)]
+mod formatter_tests {
+    use crate::formatter::{CustomFormatter, PhoneFormatter};
+    use crate::generator::ParseMode;
+
+    #[test]
+    fn test_phone_formatter_name() {
+        let formatter = PhoneFormatter;
+        assert_eq!(formatter.name(), "phone");
+    }
+
+    #[test]
+    fn test_phone_formatter_parse_international() {
+        let formatter = PhoneFormatter;
+        
+        let test_cases = vec![
+            ("+1234567890", "+1234567890", 11),
+            ("+1 234 567 890", "+1 234 567 890", 14),
+            ("+1-234-567-890", "+1-234-567-890", 14),
+            ("+1(234)567-890", "+1(234)567-890", 14),
+            ("+7 (495) 123-45-67", "+7 (495) 123-45-67", 18),
+            ("+380 44 123 4567", "+380 44 123 4567", 16),
+        ];
+
+        for (input, expected, expected_len) in test_cases {
+            let result = formatter.parse(input);
+            assert!(result.is_some(), "Failed to parse: {}", input);
+            let (parsed, len) = result.unwrap();
+            assert_eq!(parsed, expected, "Failed for input: {}", input);
+            assert_eq!(len, expected_len, "Wrong length for: {}", input);
+        }
+    }
+
+    #[test]
+    fn test_phone_formatter_parse_local() {
+        let formatter = PhoneFormatter;
+        
+        let test_cases = vec![
+            ("1234567890", "1234567890", 10),
+            ("123-456-7890", "123-456-7890", 12),
+            ("(123) 456-7890", "(123) 456-7890", 14),
+            ("123 456 7890", "123 456 7890", 12),
+            ("8 800 555 35 35", "8 800 555 35 35", 15),
+        ];
+
+        for (input, expected, expected_len) in test_cases {
+            let result = formatter.parse(input);
+            assert!(result.is_some(), "Failed to parse: {}", input);
+            let (parsed, len) = result.unwrap();
+            assert_eq!(parsed, expected, "Failed for input: {}", input);
+            assert_eq!(len, expected_len, "Wrong length for: {}", input);
+        }
+    }
+
+    #[test]
+    fn test_phone_formatter_parse_with_text() {
+        let formatter = PhoneFormatter;
+        
+        let input = "+1234567890 call me";
+        let result = formatter.parse(input);
+        assert!(result.is_some());
+        let (parsed, len) = result.unwrap();
+        assert_eq!(parsed.trim(), "+1234567890");
+        assert_eq!(len, 12); // includes the trailing space
+    }
+
+    #[test]
+    fn test_phone_formatter_parse_empty() {
+        let formatter = PhoneFormatter;
+        
+        let input = "";
+        let result = formatter.parse(input);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_phone_formatter_parse_non_phone() {
+        let formatter = PhoneFormatter;
+        
+        let input = "abc def";
+        let result = formatter.parse(input);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_phone_formatter_format_markdown() {
+        let formatter = PhoneFormatter;
+        
+        let test_cases = vec![
+            ("+1234567890", "`\\+1234567890`"),
+            ("+1-234-567-890", "`\\+1\\-234\\-567\\-890`"),
+            ("+1 (234) 567-890", "`\\+1 \\(234\\) 567\\-890`"),
+            ("123-456-7890", "`123\\-456\\-7890`"),
+            ("(123) 456-7890", "`\\(123\\) 456\\-7890`"),
+        ];
+
+        for (input, expected) in test_cases {
+            let result = formatter.format(input, ParseMode::MarkdownV2).unwrap();
+            assert_eq!(result, expected, "Failed for input: {}", input);
+        }
+    }
+
+    #[test]
+    fn test_phone_formatter_format_html() {
+        let formatter = PhoneFormatter;
+        
+        let test_cases = vec![
+            ("+1234567890", "<code>+1234567890</code>"),
+            ("+1-234-567-890", "<code>+1-234-567-890</code>"),
+            ("+1 (234) 567-890", "<code>+1 (234) 567-890</code>"),
+            ("123-456-7890", "<code>123-456-7890</code>"),
+            ("(123) 456-7890", "<code>(123) 456-7890</code>"),
+            ("<123>", "<code>&lt;123&gt;</code>"),
+        ];
+
+        for (input, expected) in test_cases {
+            let result = formatter.format(input, ParseMode::Html).unwrap();
+            assert_eq!(result, expected, "Failed for input: {}", input);
+        }
+    }
+
+    #[test]
+    fn test_phone_formatter_format_special_chars_markdown() {
+        let formatter = PhoneFormatter;
+        
+        let phone = "+1_234*567#890";
+        let result = formatter.format(phone, ParseMode::MarkdownV2).unwrap();
+        assert_eq!(result, "`\\+1\\_234\\*567\\#890`");
+    }
+
+    #[test]
+    fn test_phone_formatter_format_special_chars_html() {
+        let formatter = PhoneFormatter;
+        
+        let phone = "+1<234>567&890";
+        let result = formatter.format(phone, ParseMode::Html).unwrap();
+        assert_eq!(result, "<code>+1&lt;234&gt;567&amp;890</code>");
+    }
+
+    #[test]
+    fn test_phone_formatter_format_empty() {
+        let formatter = PhoneFormatter;
+        
+        let result_md = formatter.format("", ParseMode::MarkdownV2).unwrap();
+        assert_eq!(result_md, "``");
+        
+        let result_html = formatter.format("", ParseMode::Html).unwrap();
+        assert_eq!(result_html, "<code></code>");
+    }
+
+    #[test]
+    fn test_phone_formatter_various_formats() {
+        let formatter = PhoneFormatter;
+        
+        let phone_numbers = vec![
+            "+44 20 7946 0958",      // UK
+            "+33 1 42 86 82 00",      // France
+            "+49 30 2594 1000",       // Germany
+            "+81 3-1234-5678",        // Japan
+            "+86 10 1234 5678",       // China
+            "+61 2 9374 4000",        // Australia
+            "+55 11 98765-4321",      // Brazil
+            "+91 22 2278 2278",       // India
+            "+7 495 123-45-67",       // Russia
+            "+1-800-FLOWERS",         // US with letters
+        ];
+
+        for phone in phone_numbers {
+            let result = formatter.parse(phone);
+            assert!(result.is_some(), "Failed to parse: {}", phone);
+            
+            let (parsed, _) = result.unwrap();
+            assert!(!parsed.is_empty(), "Empty result for: {}", phone);
+            
+            let formatted_md = formatter.format(&parsed, ParseMode::MarkdownV2).unwrap();
+            assert!(formatted_md.starts_with("`"), "Markdown format should start with backtick");
+            assert!(formatted_md.ends_with("`"), "Markdown format should end with backtick");
+            
+            let formatted_html = formatter.format(&parsed, ParseMode::Html).unwrap();
+            assert!(formatted_html.starts_with("<code>"), "HTML format should start with <code>");
+            assert!(formatted_html.ends_with("</code>"), "HTML format should end with </code>");
+        }
+    }
+}
